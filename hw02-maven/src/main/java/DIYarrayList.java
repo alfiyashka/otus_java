@@ -1,7 +1,7 @@
 import java.util.*;
 
 public class DIYarrayList <T> implements List<T> {
-    private static Integer maxLength = 1000;
+    private static Integer maxLength = 1000000;
     private static Integer capacity = 10;
     private Object[] array;
     private Integer currentSize = 0;
