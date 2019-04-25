@@ -2,9 +2,9 @@ import annotations.AfterEach;
 import annotations.BeforeEach;
 import annotations.Test;
 
-public class TestClass {
-    public TestClass() {
-        System.out.println("Create new object of testClass" + this.getClass().getName());
+public class TestClassWithException {
+    public TestClassWithException() {
+        System.out.println("Create new object of " + this.getClass().getName());
     }
 
     @BeforeEach
@@ -14,12 +14,18 @@ public class TestClass {
 
     @BeforeEach
     public void prepare() {
-        System.out.println("Before each2");
+        System.out.println("Before each2 failed");
+        throw new RuntimeException("Some Error");
     }
 
     @AfterEach
     public void release() {
         System.out.println("After each1");
+    }
+
+    @AfterEach
+    public void release2() {
+        System.out.println("After each2");
     }
 
     @Test
