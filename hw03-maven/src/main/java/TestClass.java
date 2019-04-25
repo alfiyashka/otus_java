@@ -4,7 +4,7 @@ import annotations.Test;
 
 public class TestClass {
     public TestClass() {
-        System.out.println("Create new object of testClass" + this.getClass().getName());
+        System.out.println("Create new object of testClass");
     }
 
     @BeforeEach
