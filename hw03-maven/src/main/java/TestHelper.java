@@ -19,7 +19,7 @@ public class TestHelper {
             if (!method.isAnnotationPresent(annotation)) {
                 continue;
             }
-            final boolean invokeResult = invokeMethod(testObject, method, BeforeEach.class);
+            final boolean invokeResult = invokeMethod(testObject, method, annotation);
             if (!invokeResult && annotation == BeforeEach.class) {
                 return false;
             }
