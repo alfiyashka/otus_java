@@ -19,7 +19,7 @@ public class TestHelper {
             if (!method.isAnnotationPresent(annotation)) {
                 continue;
             }
-            final boolean invokeResult = invokeMethod(testObject, method, annotation);
+            final boolean invokeResult = invokeMethodByAnnotation(testObject, method, annotation);
             if (!invokeResult && annotation == BeforeEach.class) {
                 return false;
             }
@@ -27,7 +27,7 @@ public class TestHelper {
         return true;
     }
 
-    private boolean invokeMethod(Object testObject, Method method, Class<? extends Annotation> annotation) {
+    private boolean invokeMethodByAnnotation(Object testObject, Method method, Class<? extends Annotation> annotation) {
         try {
             method.invoke(testObject);
             return true;
@@ -66,7 +66,7 @@ public class TestHelper {
             }
 
             if (invokeByAnnotation(testObject, BeforeEach.class)) {
-                invokeMethod(testObject, method, Test.class);
+                invokeMethodByAnnotation(testObject, method, Test.class);
             }
             invokeByAnnotation(testObject, AfterEach.class);
         }
