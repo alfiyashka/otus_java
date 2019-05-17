@@ -38,9 +38,9 @@ public class ClassTransformer implements ClassFileTransformer {
                 try {
 
                     MethodNode methodNode = classNode.methods.stream()
-                            .filter(it -> it.name == name).findFirst().get();
+                            .filter(it -> it.name.equals(name)).findFirst().get();
 
-                    if (methodNode == null || methodNode.visibleAnnotations == null) {
+                    if (methodNode.visibleAnnotations == null) {
                         return methodVisitor;
                     }
                     List<AnnotationNode> necessaryLogAnnotation = methodNode.visibleAnnotations.stream()

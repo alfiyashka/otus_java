@@ -13,8 +13,8 @@ import java.lang.invoke.MethodType;
 
 public class LoggingAdapter extends AdviceAdapter {
     private final String name;
-    MethodNode methodNode;
-    final Type[] argumentsTypes;
+    private final MethodNode methodNode;
+    private final Type[] argumentsTypes;
 
     public LoggingAdapter(int api, MethodVisitor methodVisitor,
                            int access, String name, String descriptor, MethodNode methodNode ) {
