@@ -1,10 +1,12 @@
 package atm;
 
+import atm.impl.Banknote;
+
 public interface ICell {
-    int add(int amount);
+    int add(Banknote banknote);
     int balance();
     int issue(int amount);
-    int nominalValue();
+    Nominal nominal();
     void fill();
     int amount();
 }
