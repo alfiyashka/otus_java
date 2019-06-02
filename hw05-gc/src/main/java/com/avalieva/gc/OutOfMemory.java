@@ -23,16 +23,31 @@ public class OutOfMemory {
         }
     }
 
-    // for big heap 8192m, 20480m
+    // for big heap 8192m
     public void generateOOM1() throws InterruptedException {
         List<String> array = new ArrayList<>();
         for (int loop = 0; loop < Integer.MAX_VALUE; loop++) {
-            int local = 120000000; //1) 1000000;
+            int local = 120000000;
             for (int ind = 0; ind < local; ind ++) {
                 array.add(new String(new char[1]));
 
             }
             for (int ind = 0; ind < local / 100000; ind ++) {
+                array.remove(ind);
+            }
+        }
+    }
+
+    // for  big heap 20480m
+    public void generateOOM2() throws InterruptedException {
+        List<String> array = new ArrayList<>();
+        for (int loop = 0; loop < Integer.MAX_VALUE; loop++) {
+            Integer local = 1000000000; //1) 1000000;
+            for (int ind = 0; ind < local; ind ++) {
+                array.add(new String(new char[1]));
+
+            }
+            for (int ind = 0; ind < 50000000; ind ++) {//local / 20000000
                 array.remove(ind);
             }
         }
@@ -45,9 +60,10 @@ public class OutOfMemory {
 
         try {
             OutOfMemory outOfMemory = new OutOfMemory();
-            outOfMemory.generateOOM();
+            outOfMemory.generateOOM2();
         }
         catch (OutOfMemoryError e) {
+            System.out.println("!!!!!!!!!!!!Exception:" + e.getMessage());
             long duration = System.nanoTime() - start;
             System.out.println("duration " + duration/1000000000);
         }
