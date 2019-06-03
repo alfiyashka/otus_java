@@ -10,8 +10,10 @@
     <version>1.0</version>
     <modules>
         <module>hw01-maven</module>
+        <module>hw02-maven</module>
         <module>hw03-maven</module>
         <module>hw04-bytecode</module>
+        <module>hw05-gc</module>
     </modules>
 
     <properties>
