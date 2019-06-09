@@ -9,11 +9,15 @@ import java.util.Map;
 class JsonObjectWriter {
     public JsonObjectBuilder write(Object obj) {
         try {
+
+            JsonObjectBuilder jsonObjectBuilder = Json.createObjectBuilder();
+            if (obj == null) {
+                return jsonObjectBuilder;
+            }
             var clazz = obj.getClass();
             var fields = clazz.getDeclaredFields();
-            JsonObjectBuilder jsonObjectBuilder = Json.createObjectBuilder();
             for (var field : fields) {
-                if (Modifier.isStatic(field.getModifiers())) {//gson ignores static values)
+                if (Modifier.isStatic(field.getModifiers())) {//gson ignores static values
                     continue;
                 }
                 if (!field.canAccess(obj)) {
@@ -38,44 +42,14 @@ class JsonObjectWriter {
                     jsonObjectBuilder.add(field.getName(),
                             new JsonArrayWriter().write(fieldData));
                 }
-                else if (Integer.class.isAssignableFrom(type)
-                        || int.class.isAssignableFrom(type)){
-                    jsonObjectBuilder.add(field.getName(), (Integer) fieldData);
-                }
-                else if (Boolean.class.isAssignableFrom(type)
-                        || boolean.class.isAssignableFrom(type)){
-                    jsonObjectBuilder.add(field.getName(), (Boolean) fieldData);
-                }
-                else if (String.class.isAssignableFrom(type)) {
-                    jsonObjectBuilder.add(field.getName(), (String) fieldData);
-                }
-                else if (char.class.isAssignableFrom(type)
-                        || Character.class.isAssignableFrom(type)) {
-                    jsonObjectBuilder.add(field.getName(), fieldData.toString());
-                }
-                else if (Float.class.isAssignableFrom(type)
-                        || float.class.isAssignableFrom(type)) {
-                    jsonObjectBuilder.add(field.getName(),
-                            Double.valueOf(((Float) fieldData).toString()).doubleValue());
-                }
-                else if (Long.class.isAssignableFrom(type)
-                        || long.class.isAssignableFrom(type)) {
-                    jsonObjectBuilder.add(field.getName(), (Long) fieldData);
-                }
-                else if (Double.class.isAssignableFrom(type)
-                        || double.class.isAssignableFrom(type)) {
-                    jsonObjectBuilder.add(field.getName(), (Double) fieldData);
-                }
-                else if (Short.class.isAssignableFrom(type)
-                        || short.class.isAssignableFrom(type)) {
-                    jsonObjectBuilder.add(field.getName(), (Short) fieldData);
-                }
-                else if (Byte.class.isAssignableFrom(type)
-                        || byte.class.isAssignableFrom(type)) {
-                    jsonObjectBuilder.add(field.getName(), (Byte) fieldData);
-                }
                 else {
-                    jsonObjectBuilder.add(field.getName(), write(fieldData));
+                    var jsonValue = JsonValueHelper.jsonValue(fieldData);
+                    if (jsonValue.isPresent()) {
+                        jsonObjectBuilder.add(field.getName(), jsonValue.get());
+                    }
+                    else {
+                        jsonObjectBuilder.add(field.getName(), write(fieldData));
+                    }
                 }
             }
             return jsonObjectBuilder;

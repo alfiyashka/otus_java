@@ -1,5 +1,5 @@
 package json.converter;
 
-public interface IJsonWriter {
+public interface JsonWriter {
     String write(Object object);
 }

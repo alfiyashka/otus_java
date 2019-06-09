@@ -1,15 +1,15 @@
 import com.google.gson.Gson;
 import json.JsonInput2;
 import json.JsonInput;
-import json.converter.impl.JsonWriter;
+import json.converter.impl.JsonWriterImpl;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.HashSet;
+import java.util.*;
 
 public class Main {
 
     public static void main(String[] args) {
+        var jsonWriter = new JsonWriterImpl();
+        Gson gson = new Gson();
 
         JsonInput jsonInput = new JsonInput();
         jsonInput.anInt = 1;
@@ -48,14 +48,53 @@ public class Main {
 
         jsonInput.jsonInput2Array = new JsonInput2[]{inputClass};
 
-        var jsonWriter = new JsonWriter();
+
+
+
 
         var json =  jsonWriter.write(jsonInput);
-        Gson gson = new Gson();
+
         gson.fromJson(json, JsonInput.class);
         String jsonFromGson = gson.toJson(jsonInput);
         boolean equal = jsonFromGson.equals(json);
 
         System.out.println("Jsons are " + (equal ? "equal" : "not equal"));
+
+        System.out.println(jsonWriter.write(null));
+        System.out.println(gson.toJson(null));
+
+        System.out.println(jsonWriter.write((byte)1));
+        System.out.println(gson.toJson((byte)1));
+
+        System.out.println(jsonWriter.write((short)1f));
+        System.out.println(gson.toJson((short)1f));
+
+        System.out.println(jsonWriter.write(1));
+        System.out.println(gson.toJson(1));
+
+        System.out.println(jsonWriter.write(1L));
+        System.out.println(gson.toJson(1L));
+
+        System.out.println(jsonWriter.write(1f));
+        System.out.println(gson.toJson(1f));
+
+        System.out.println(jsonWriter.write(1d));
+        System.out.println(gson.toJson(1d));
+
+        System.out.println(jsonWriter.write("aaa"));
+        System.out.println(gson.toJson("aaa"));
+
+
+        System.out.println(jsonWriter.write('a'));
+        System.out.println(gson.toJson('a'));
+
+        System.out.println(jsonWriter.write(new int[] {1, 2, 3}));
+        System.out.println(gson.toJson(new int[] {1, 2, 3}));
+
+        System.out.println(jsonWriter.write(List.of(1, 2 ,3)));
+        System.out.println(gson.toJson(List.of(1, 2 ,3)));
+
+        System.out.println(jsonWriter.write(Collections.singletonList(1)));
+        System.out.println(gson.toJson(Collections.singletonList(1)));
     }
 }

@@ -43,38 +43,15 @@ class JsonMapWriter {
                 else if (valueClazz.isArray()) {
                     objectBuilder.add(keyValue, new JsonArrayWriter().write(entry.getValue()));
                 }
-                else if (Integer.class.isAssignableFrom(valueClazz)){
-                    objectBuilder.add(keyValue, (Integer) entry.getValue());
-                }
-                else if (Boolean.class.isAssignableFrom(valueClazz)){
-                    objectBuilder.add(keyValue, (Boolean) entry.getValue());
-                }
-                else if (String.class.isAssignableFrom(valueClazz)) {
-                    objectBuilder.add(keyValue, (String) entry.getValue());
-                }
-                else if (Character.class.isAssignableFrom(valueClazz)) {
-                    objectBuilder.add(keyValue, entry.getValue().toString());
-                }
-                else if (Float.class.isAssignableFrom(valueClazz)) {
-                    objectBuilder.add(keyValue,
-                            Double.valueOf(((Float)entry.getValue()).toString()).doubleValue());
-                }
-                else if (Long.class.isAssignableFrom(valueClazz)) {
-                    objectBuilder.add(keyValue, (Long) entry.getValue());
-                }
-                else if (Double.class.isAssignableFrom(valueClazz)) {
-                    objectBuilder.add(keyValue, (Double) entry.getValue());
-                }
-                else if (Short.class.isAssignableFrom(valueClazz)) {
-                    objectBuilder.add(keyValue, (Short) entry.getValue());
-                }
-                else if (Byte.class.isAssignableFrom(valueClazz)) {
-                    objectBuilder.add(keyValue, (Byte) entry.getValue());
-                }
                 else {
-                    objectBuilder.add(keyValue, new JsonObjectWriter().write(entry.getValue()));
+                    var jsonValue = JsonValueHelper.jsonValue(entry.getValue());
+                    if (jsonValue.isPresent()) {
+                        objectBuilder.add(keyValue, jsonValue.get());
+                    }
+                    else {
+                        objectBuilder.add(keyValue, new JsonObjectWriter().write(entry.getValue()));
+                    }
                 }
-
             }
             return objectBuilder;
         }
