@@ -13,7 +13,7 @@ public class JsonWriterImpl implements JsonWriter {
         }
         var objectClazz = object.getClass();
         if (Collection.class.isAssignableFrom(objectClazz)) {
-            return new JsonCollectionWriter().write(object)
+            return new JsonArrayWriter().write(((Collection)object).toArray())
                     .build()
                     .toString();
         } else if (Map.class.isAssignableFrom(objectClazz)) {

@@ -2,6 +2,7 @@ package json.converter.impl;
 
 import javax.json.Json;
 import javax.json.JsonArrayBuilder;
+import java.lang.reflect.Array;
 import java.util.Collection;
 import java.util.Map;
 
@@ -15,45 +16,9 @@ class JsonArrayWriter {
                     + arrayClazz.getComponentType().getName());
         }
         JsonArrayBuilder arrayBuilder = Json.createArrayBuilder();
-        if (boolean[].class.isAssignableFrom(arrayClazz)) {
-            for (var booleanData: (boolean[]) array) {
-                arrayBuilder.add(booleanData);
-            }
-        }
-        else if (byte[].class.isAssignableFrom(arrayClazz)) {
-            for (var byteData: (byte[]) array) {
-                arrayBuilder.add(byteData);
-            }
-        }
-        else if (char[].class.isAssignableFrom(arrayClazz)) {
-            for (char charData: (char[]) array) {
-                arrayBuilder.add(String.valueOf(charData));
-            }
-        }
-        else if (short[].class.isAssignableFrom(arrayClazz)) {
-            for (var shortData: (short[]) array) {
-                arrayBuilder.add(shortData);
-            }
-        }
-        else if (int[].class.isAssignableFrom(arrayClazz)) {
-            for (var intData: (int[]) array) {
-                arrayBuilder.add(intData);
-            }
-        }
-        else if (long[].class.isAssignableFrom(arrayClazz)) {
-            for (var longData: (long[]) array) {
-                arrayBuilder.add(longData);
-            }
-        }
-        else if (float[].class.isAssignableFrom(arrayClazz)) {
-            for (var floatData: (float[]) array) {
-                arrayBuilder.add(Double.valueOf(((Float)floatData).toString()).doubleValue());
-            }
-        }
-        else if (double[].class.isAssignableFrom(arrayClazz)) {
-            for (var doubleData: (double[]) array) {
-                arrayBuilder.add(doubleData);
-            }
+
+        for (int i = 0; i < Array.getLength(array); i++) {
+            arrayBuilder.add(JsonValueHelper.jsonValue(Array.get(array, i)).get());
         }
         return arrayBuilder;
     }
