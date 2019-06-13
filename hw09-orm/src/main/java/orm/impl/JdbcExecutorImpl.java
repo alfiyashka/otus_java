@@ -213,7 +213,7 @@ public class JdbcExecutorImpl<T> implements JdbcExecutor<T> {
     @Override
     public void update(T objectData) throws SQLException {
         if (objectData == null) {
-            throw new RuntimeException("Cannot create object because object data is not defined");
+            throw new RuntimeException("Cannot update object because object data is not defined");
         }
         checkObject(objectData.getClass());
         Savepoint savepoint = connection.setSavepoint("UpdateSavepoint");
