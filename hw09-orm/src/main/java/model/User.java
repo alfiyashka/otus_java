@@ -1,12 +1,15 @@
-import orm.impl.Id;
+package model;
+
+
+import orm.Id;
 
 public class User {
     private @Id
     long id;
-    private char name;
+    private String name;
     private int age;
 
-    public User(int id, char name, int age) {
+    public User(int id, String name, int age) {
         this.id = id;
         this.name = name;
         this.age = age;
@@ -23,7 +26,7 @@ public class User {
         return id;
     }
 
-    public char getName() {
+    public String getName() {
         return name;
     }
 
@@ -35,7 +38,7 @@ public class User {
         this.id = id;
     }
 
-    public void setName(char name) {
+    public void setName(String name) {
         this.name = name;
     }
 
@@ -55,4 +58,5 @@ public class User {
 
     }
 }
+
 

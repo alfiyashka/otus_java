@@ -1,8 +1,12 @@
-import orm.impl.Id;
+package model;
+
+
+import orm.Id;
 
 public class Account {
 
-    private @Id long no;
+    private @Id
+    long no;
     private String type;
     private float rest;
 
@@ -56,4 +60,5 @@ public class Account {
     }
 
 }
+
 

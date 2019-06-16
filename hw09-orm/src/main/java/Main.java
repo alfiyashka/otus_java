@@ -1,12 +1,13 @@
 
+import model.Account;
+import model.User;
 import orm.JdbcExecutor;
 import orm.impl.JdbcExecutorImpl;
 
 public class Main {
     public static void main(String[] args) {
-        User myUser = new User(2,'s', 28);
-        Account account = new Account(3,"Some type", 12.6F);
         try {
+            User myUser = new User(2,"Alex", 28);
             JdbcExecutor<User> jdbcExecutorUser = new JdbcExecutorImpl<>();
             jdbcExecutorUser.create(myUser);
             myUser.setAge(30);
@@ -18,6 +19,7 @@ public class Main {
             System.out.println( "Find object is " +
                     (myUser.equals(findUser) ? "equal" : " non equal"));
 
+            Account account = new Account(3,"Some type", 12.6F);
             JdbcExecutor<Account> jdbcExecutorAccount = new JdbcExecutorImpl<>();
             jdbcExecutorAccount.create(account);
             account.setType("new type");

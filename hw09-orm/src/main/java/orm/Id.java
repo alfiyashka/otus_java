@@ -1,4 +1,4 @@
-package orm.impl;
+package orm;
 
 
 import java.lang.annotation.ElementType;

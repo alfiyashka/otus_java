@@ -1,114 +1,65 @@
 package orm.impl;
 
+import orm.Id;
 import orm.JdbcExecutor;
+import orm.JdbcH2ConnectorHelper;
 
 import java.lang.reflect.Field;
 import java.sql.*;
+import java.util.Arrays;
+import java.util.List;
+import java.util.stream.Collectors;
 
 public class JdbcExecutorImpl<T> implements JdbcExecutor<T> {
     private final Connection connection;
+    private Field idField;
+    private List<Field> fields;
 
     public JdbcExecutorImpl() {
-        try {
-            Class.forName("org.h2.Driver");
-            connection = DriverManager.getConnection("jdbc:h2:tcp://localhost:9092/~/test_db",
-                    "sa", "");
-            connection.setAutoCommit(false);
-        }
-        catch (Exception e){
-            throw new RuntimeException("Cannot connect to database H2 because of following error:"
-                    + e.getMessage());
-        }
+        JdbcH2ConnectorHelper h2ConnectorHelper = new JdbcH2ConnectorHelperImpl(
+                "jdbc:h2:tcp://localhost:9092/~/test_db",
+                "sa",
+                "");
+        h2ConnectorHelper.connect();
+        connection = h2ConnectorHelper.connection();
     }
 
-    private boolean checkObject(Class<?> dataClazz) {
-        var fields = dataClazz.getDeclaredFields();
-        for (var field: fields){
-            if (field.getAnnotation(Id.class) != null) {
-                return true;
-            }
-        }
-        throw new RuntimeException("Cannot use JdbcExecutor because class '"
-                + dataClazz.getName() + "' does not have field with annotation 'Id'");
+    private void parseObject(Class<?> dataClazz) {
+        fields =  Arrays.asList(dataClazz.getDeclaredFields());
+        fields.stream().forEach( it -> { it.setAccessible(true); });
+        idField = fields.stream().filter(f -> f.getAnnotation(Id.class) != null).findAny()
+                .orElseThrow(() -> new RuntimeException("Cannot use JdbcExecutor because class '"
+                        + dataClazz.getName() + "' does not have field with annotation 'Id'")
+                );
     }
 
     private String insertStatement(T obj) {
         var clazz = obj.getClass();
         try {
             String tableName = clazz.getSimpleName();
-            StringBuilder statement = new StringBuilder("insert into " + tableName);
+            var columnNamesList = fields.stream()
+                    .filter(it -> {
+                        try {
+                            return (!it.equals(idField) || it.get(obj) != null);
+                        }
+                        catch (Exception e) {
+                            throw new RuntimeException("Cannot collect column names list for insert statement"
+                                    + " because of error: " + e.getMessage());
+                        }
+                    })
+                    .map(it -> it.getName()).collect(Collectors.toList());
+            var columnValues = new String[columnNamesList.size()];
+            Arrays.fill(columnValues, "?");
 
-            var fields = clazz.getDeclaredFields();
-            boolean needSeparator = false;
-            StringBuilder columnNames = new StringBuilder(" (");
-            StringBuilder columnValues = new StringBuilder(" (");
-            for (var field : fields) {
-                if (field.getAnnotation(Id.class) != null) {
-                    if (!field.canAccess(obj)) {
-                        field.setAccessible(true);
-                    }
-                    if (field.get(obj) == null) {
-                        continue;
-                    }
-                }
-                if (needSeparator) {
-                    columnValues.append(", ");
-                    columnNames.append(", ");
-                }
-                columnValues.append("?");
-                columnNames.append(field.getName());
-                needSeparator = true;
-            }
-            columnValues.append(")");
-            columnNames.append(")");
-            statement.append(columnNames);
-            statement.append(" values ");
-            statement.append(columnValues);
-            return statement.toString();
+            var statement = String.format(" insert into %s (%s) values (%s)" ,
+                    tableName,
+                    columnNamesList.stream().collect(Collectors.joining(", ")),
+                    Arrays.asList(columnValues).stream().collect(Collectors.joining(", ")));
+
+            return statement;
         }
         catch (Exception e) {
             throw new RuntimeException("Cannot create insert statement because of error: "
-                    + e.getMessage());
-        }
-    }
-
-    private void setDataIntoPreparedStatement(PreparedStatement preparedStatement,
-                                              Class<?> fieldType,
-                                              Object fieldData,
-                                              int rowInd) {
-        try {
-            if (Integer.class.isAssignableFrom(fieldType)
-                    || int.class.isAssignableFrom(fieldType)) {
-                preparedStatement.setInt(rowInd, (int) fieldData);
-            } else if (String.class.isAssignableFrom(fieldType)) {
-                preparedStatement.setString(rowInd, (String) fieldData);
-            } else if (char.class.isAssignableFrom(fieldType)
-                    || Character.class.isAssignableFrom(fieldType)) {
-                preparedStatement.setString(rowInd, ((Character) fieldData).toString());
-            } else if (Float.class.isAssignableFrom(fieldType)
-                    || float.class.isAssignableFrom(fieldType)) {
-                preparedStatement.setFloat(rowInd, (Float) fieldData);
-            } else if (Long.class.isAssignableFrom(fieldType)
-                    || long.class.isAssignableFrom(fieldType)) {
-                preparedStatement.setLong(rowInd, (Long) fieldData);
-            } else if (Double.class.isAssignableFrom(fieldType)
-                    || double.class.isAssignableFrom(fieldType)) {
-                preparedStatement.setDouble(rowInd, (Double) fieldData);
-            } else if (Short.class.isAssignableFrom(fieldType)
-                    || short.class.isAssignableFrom(fieldType)) {
-                preparedStatement.setShort(rowInd, (Short) fieldData);
-            } else if (Byte.class.isAssignableFrom(fieldType)
-                    || byte.class.isAssignableFrom(fieldType)) {
-                preparedStatement.setByte(rowInd, (Byte) fieldData);
-            } else if (Boolean.class.isAssignableFrom(fieldType)
-                    || boolean.class.isAssignableFrom(fieldType)) {
-                preparedStatement.setBoolean(rowInd, (Boolean) fieldData);
-            } else {
-                throw new RuntimeException("Unsupported data type - '" + fieldType.getName() + "'");
-            }
-        }
-        catch (Exception e) {
-            throw new RuntimeException("Cannot set data into prepared statement because of error: "
                     + e.getMessage());
         }
     }
@@ -119,25 +70,19 @@ public class JdbcExecutorImpl<T> implements JdbcExecutor<T> {
             throw new RuntimeException("Cannot create object because object data is not defined");
         }
 
-        checkObject(objectData.getClass());
-        Field idField = null;
+        parseObject(objectData.getClass());
         Savepoint savepoint = connection.setSavepoint("InsertSavepoint");
-        try (PreparedStatement preparedStatement = connection.prepareStatement(insertStatement(objectData))) {
-            var fields = objectData.getClass().getDeclaredFields();
+        try (PreparedStatement preparedStatement
+                     = connection.prepareStatement(insertStatement(objectData))) {
             int rowInd = 1;
             for (var field: fields) {
-                if (!field.canAccess(objectData)) {
-                    field.setAccessible(true);
-                }
-                if (field.getAnnotation(Id.class) != null) {
-                    idField = field;
+                if (field.equals(idField)) {
                     if (field.get(objectData) == null) {
                         continue;
                     }
                 }
                 var fieldData = field.get(objectData);
-                var fieldType = field.getType();
-                setDataIntoPreparedStatement(preparedStatement, fieldType, fieldData, rowInd);
+                preparedStatement.setObject(rowInd, fieldData);
                 rowInd++;
             }
             preparedStatement.execute();
@@ -151,8 +96,8 @@ public class JdbcExecutorImpl<T> implements JdbcExecutor<T> {
         try {
             if (idField.get(objectData) == null) {
                 // if idField is null, then it was created with auto increment column
-                int idOfObjectData = maxId(objectData);
-                idField.setInt(objectData, idOfObjectData);
+                long idOfObjectData = maxId(objectData);
+                idField.setLong(objectData, idOfObjectData);
             }
         }
         catch (Exception e) {
@@ -160,25 +105,18 @@ public class JdbcExecutorImpl<T> implements JdbcExecutor<T> {
         }
     }
 
-    private String idColumnName(Class<?>  objClazz) {
-        var fields = objClazz.getDeclaredFields();
-        for (var field: fields) {
-            if (field.getAnnotation(Id.class) != null) {
-                return field.getName();
-            }
-        }
-        throw new RuntimeException("Cannot find column name from field with Id annotation");
-    }
-
     private String maxIdQuery(Class<?>  objClazz) {
-        return "Select max(" + idColumnName(objClazz) + ") from " + objClazz.getSimpleName();
+        return String.format("Select max(%s) from %s",
+                idField.getName(),
+                objClazz.getSimpleName());
     }
 
-    private int maxId(T objectData) {
-        try(PreparedStatement preparedStatement = connection.prepareStatement(maxIdQuery(objectData.getClass()))) {
+    private long maxId(T objectData) {
+        try (PreparedStatement preparedStatement
+                     = connection.prepareStatement(maxIdQuery(objectData.getClass()))) {
             try (ResultSet resultSet = preparedStatement.executeQuery()) {
                 resultSet.next();
-                return resultSet.getInt(1);
+                return resultSet.getLong(1);
             }
         }
         catch (Exception e) {
@@ -190,24 +128,14 @@ public class JdbcExecutorImpl<T> implements JdbcExecutor<T> {
     private String updateStatement(T obj) {
         var clazz = obj.getClass();
         String tableName = clazz.getSimpleName();
-        StringBuilder statement = new StringBuilder("update " + tableName +" set ");
-
-        var fields = clazz.getDeclaredFields();
-        Field idField = null;
-        boolean needSeparator = false;
-        for (int i = 0; i < fields.length; i++) {
-            if (needSeparator) {
-                statement.append(", ");
-            }
-            if (fields[i].getAnnotation(Id.class) != null) {
-                idField = fields[i];
-                continue;
-            }
-            statement.append(fields[i].getName() + " = ?");
-            needSeparator = true;
-        }
-        statement.append(" where " + idField.getName() + " = ? ");
-        return statement.toString();
+        String statement = String.format("update %s set %s where %s = ?", tableName,
+                fields.stream()
+                        .filter( it -> !it.equals(idField))
+                        .map(it -> String.format(" %s = ?", it.getName()))
+                        .collect(Collectors.joining(", ")),
+                idField.getName()
+                );
+        return statement;
     }
 
     @Override
@@ -215,30 +143,22 @@ public class JdbcExecutorImpl<T> implements JdbcExecutor<T> {
         if (objectData == null) {
             throw new RuntimeException("Cannot update object because object data is not defined");
         }
-        checkObject(objectData.getClass());
+        parseObject(objectData.getClass());
         Savepoint savepoint = connection.setSavepoint("UpdateSavepoint");
-        try (PreparedStatement preparedStatement = connection.prepareStatement(updateStatement(objectData))) {
-            var fields = objectData.getClass().getDeclaredFields();
-            Field idField = null;
+        try (PreparedStatement preparedStatement
+                     = connection.prepareStatement(updateStatement(objectData))) {
             int rowInd = 1;
             for (var field : fields) {
-                if (!field.canAccess(objectData)){
-                    field.setAccessible(true);
-                }
-                if (field.getAnnotation(Id.class) != null) {
-                    idField = field;
+                if (field.equals(idField)) {
                     continue;
                 }
                 var fieldData = field.get(objectData);
-                var fieldType = field.getType();
-                setDataIntoPreparedStatement(preparedStatement, fieldType, fieldData, rowInd);
+                preparedStatement.setObject(rowInd, fieldData);
                 rowInd++;
             }
 
             var idFieldData = idField.get(objectData);
-            var idFieldType = idField.getType();
-            preparedStatement.setString(rowInd, idFieldData.toString());
-            setDataIntoPreparedStatement(preparedStatement, idFieldType, idFieldData, rowInd);
+            preparedStatement.setObject(rowInd, idFieldData);
 
             preparedStatement.execute();
             connection.commit();
@@ -250,91 +170,46 @@ public class JdbcExecutorImpl<T> implements JdbcExecutor<T> {
         }
     }
 
-    public long getIdData(T objectData) {
-        try {
-            var fields = objectData.getClass().getDeclaredFields();
-
-            for (var field : fields) {
-                if (!field.canAccess(objectData)) {
-                    field.setAccessible(true);
-                }
-                if (field.getAnnotation(Id.class) != null) {
-                    return field.getLong(objectData);
-                }
-            }
-        }
-        catch (Exception e) {
-            throw new RuntimeException("Cannot get data from field with annotation 'Id' because of error: "
-                    + e.getMessage());
-        }
-        return -1;
-    }
-
     @Override
-    public void createOrUpdate(T objectData) throws SQLException {
+    public void createOrUpdate(T objectData) {
         if (objectData == null) {
             throw new RuntimeException("Cannot create or update object because object data is not defined");
         }
-        checkObject(objectData.getClass());
         var objDataClazz = objectData.getClass();
-        checkObject(objDataClazz);
-        long idData = getIdData(objectData);
-        if (load(idData, objDataClazz) == null) {
-            create(objectData);
+        try {
+            parseObject(objDataClazz);
+            long idData = idField.getLong(objectData);
+            if (load(idData, objDataClazz) == null) {
+                create(objectData);
+            } else {
+                update(objectData);
+            }
         }
-        else {
-            update(objectData);
+        catch (Exception e) {
+            throw new RuntimeException("Cannot perform Create or Update object of class "
+                    + objDataClazz.getName() + " because of error: " + e.getMessage());
         }
     }
 
     private String selectStatement(Class<?> clazz) {
-        StringBuilder statement = new StringBuilder("Select ");
-        var fields = clazz.getDeclaredFields();
-        Field idField = null;
-        boolean needSeparator = false;
-        for (var field: fields) {
-            if (field.getAnnotation(Id.class) != null) {
-                idField = field;
-            }
-            if (needSeparator) {
-                statement.append(", ");
-            }
-
-            statement.append(field.getName());
-            needSeparator = true;
-        }
-        statement.append(" from " + clazz.getSimpleName());
-        statement.append(" where " + idField.getName() + " = ?");
-        return statement.toString();
-    }
-
-    private <T> T newObject(Class<T> clazz) {
-        try {
-            return clazz.getConstructor().newInstance();
-        }
-        catch(Exception e) {
-            throw new RuntimeException("Cannot create object of class " + clazz.getName()
-                    + " because of following error: " + e.getMessage());
-        }
+        String statement = String.format("Select %s from %s where %s = ?",
+                fields.stream().map(it -> it.getName()).collect(Collectors.joining(", ")),
+                clazz.getSimpleName(),
+                idField.getName());
+        return statement;
     }
 
     @Override
     public <T> T load(long id, Class<T> clazz) {
-        if (!checkObject(clazz)) {
-            return null;
-        }
-        final T objNew = newObject(clazz);
-
         try (PreparedStatement preparedStatement = connection.prepareStatement(selectStatement(clazz))) {
             preparedStatement.setLong(1, id);
             int rowInd = 1;
             try (ResultSet resultSet = preparedStatement.executeQuery()) {
                 resultSet.next();
-                for (var field: clazz.getDeclaredFields()) {
-                    if (!field.canAccess(objNew)) {
-                        field.setAccessible(true);
-                    }
+                final T objNew = clazz.getConstructor().newInstance();
+                for (var field: fields) {
                     var fieldType = field.getType();
+
                     if (Integer.class.isAssignableFrom(fieldType)
                             || int.class.isAssignableFrom(fieldType)){
                         field.setInt(objNew, resultSet.getInt(rowInd));
@@ -377,13 +252,13 @@ public class JdbcExecutorImpl<T> implements JdbcExecutor<T> {
                     }
                     rowInd++;
                 }
+                return objNew;
             }
         }
         catch (Exception e) {
             throw new RuntimeException("Cannot select data from table "
                     + clazz.getSimpleName() + " because of error: " + e.getMessage());
         }
-        return objNew;
     }
 
     @Override
