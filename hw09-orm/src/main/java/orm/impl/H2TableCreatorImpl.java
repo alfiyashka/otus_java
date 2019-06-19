@@ -20,7 +20,7 @@ public class H2TableCreatorImpl implements TableCreator {
     private static final String createUserTblStatement = "CREATE TABLE IF NOT EXISTS User (id bigint(20) NOT NULL auto_increment, " +
             " name varchar(255), age int(3))";
 
-    private static final String createAccauntTblStatement = "CREATE TABLE IF NOT EXISTS Account (no bigint(20) NOT NULL auto_increment, " +
+    private static final String createAccountTblStatement = "CREATE TABLE IF NOT EXISTS Account (no bigint(20) NOT NULL auto_increment, " +
             " type varchar(255), rest number) ";
 
     private void createTableIfNotExist(String statement) {
@@ -39,7 +39,7 @@ public class H2TableCreatorImpl implements TableCreator {
 
     @Override
     public void createAccountTableIfNotExist() {
-        createTableIfNotExist(createAccauntTblStatement);
+        createTableIfNotExist(createAccountTblStatement);
     }
 
     @Override
