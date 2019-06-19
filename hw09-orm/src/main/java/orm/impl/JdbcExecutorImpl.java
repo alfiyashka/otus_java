@@ -14,6 +14,11 @@ public class JdbcExecutorImpl<T> implements JdbcExecutor<T> {
     private final Connection connection;
     private Field idField;
     private List<Field> fields;
+    private String updateStatement;
+    private String selectStatement;
+    private String selectMaxIdStatement;
+    private String insertStatementWithId;
+    private String insertStatement;
 
     public JdbcExecutorImpl() {
         JdbcH2ConnectorHelper h2ConnectorHelper = new JdbcH2ConnectorHelperImpl(
@@ -25,6 +30,9 @@ public class JdbcExecutorImpl<T> implements JdbcExecutor<T> {
     }
 
     private void parseObject(Class<?> dataClazz) {
+        if (fields != null && idField != null) {
+            return;
+        }
         fields =  Arrays.asList(dataClazz.getDeclaredFields());
         fields.stream().forEach( it -> { it.setAccessible(true); });
         idField = fields.stream().filter(f -> f.getAnnotation(Id.class) != null).findAny()
@@ -36,27 +44,40 @@ public class JdbcExecutorImpl<T> implements JdbcExecutor<T> {
     private String insertStatement(T obj) {
         var clazz = obj.getClass();
         try {
-            String tableName = clazz.getSimpleName();
-            var columnNamesList = fields.stream()
-                    .filter(it -> {
-                        try {
-                            return (!it.equals(idField) || it.get(obj) != null);
-                        }
-                        catch (Exception e) {
-                            throw new RuntimeException("Cannot collect column names list for insert statement"
-                                    + " because of error: " + e.getMessage());
-                        }
-                    })
-                    .map(it -> it.getName()).collect(Collectors.toList());
-            var columnValues = new String[columnNamesList.size()];
-            Arrays.fill(columnValues, "?");
+            boolean idIsExist = idField.getLong(obj) != 0;
+            if (idIsExist && insertStatementWithId != null && !insertStatementWithId.isEmpty()) {
+                return insertStatementWithId;
+            }
+            else if (!idIsExist && insertStatement != null && !insertStatement.isEmpty()) {
+                return  insertStatement;
+            }
+            else {
+                String tableName = clazz.getSimpleName();
+                var columnNamesList = fields.stream()
+                        .filter(it -> {
+                            try {
+                                return (!it.equals(idField) || it.getLong(obj) != 0);
+                            } catch (Exception e) {
+                                throw new RuntimeException("Cannot collect column names list for insert statement"
+                                        + " because of error: " + e.getMessage());
+                            }
+                        })
+                        .map(it -> it.getName()).collect(Collectors.toList());
+                var columnValues = new String[columnNamesList.size()];
+                Arrays.fill(columnValues, "?");
 
-            var statement = String.format(" insert into %s (%s) values (%s)" ,
-                    tableName,
-                    columnNamesList.stream().collect(Collectors.joining(", ")),
-                    Arrays.asList(columnValues).stream().collect(Collectors.joining(", ")));
+                var statement = String.format(" insert into %s (%s) values (%s)",
+                        tableName,
+                        columnNamesList.stream().collect(Collectors.joining(", ")),
+                        Arrays.asList(columnValues).stream().collect(Collectors.joining(", ")));
 
-            return statement;
+                if (idIsExist) {
+                    insertStatementWithId = statement;
+                } else {
+                    insertStatement = statement;
+                }
+                return statement;
+            }
         }
         catch (Exception e) {
             throw new RuntimeException("Cannot create insert statement because of error: "
@@ -74,16 +95,16 @@ public class JdbcExecutorImpl<T> implements JdbcExecutor<T> {
         Savepoint savepoint = connection.setSavepoint("InsertSavepoint");
         try (PreparedStatement preparedStatement
                      = connection.prepareStatement(insertStatement(objectData))) {
-            int rowInd = 1;
-            for (var field: fields) {
+            int paramInd = 1;
+            for (var field : fields) {
                 if (field.equals(idField)) {
-                    if (field.get(objectData) == null) {
+                    if (field.getLong(objectData) == 0) {
                         continue;
                     }
                 }
                 var fieldData = field.get(objectData);
-                preparedStatement.setObject(rowInd, fieldData);
-                rowInd++;
+                preparedStatement.setObject(paramInd, fieldData);
+                paramInd++;
             }
             preparedStatement.execute();
             connection.commit();
@@ -94,7 +115,7 @@ public class JdbcExecutorImpl<T> implements JdbcExecutor<T> {
                     + objectData.getClass().getSimpleName() + " because of error: " + e.getMessage());
         }
         try {
-            if (idField.get(objectData) == null) {
+            if (idField.getLong(objectData) == 0) {
                 // if idField is null, then it was created with auto increment column
                 long idOfObjectData = maxId(objectData);
                 idField.setLong(objectData, idOfObjectData);
@@ -106,9 +127,12 @@ public class JdbcExecutorImpl<T> implements JdbcExecutor<T> {
     }
 
     private String maxIdQuery(Class<?>  objClazz) {
-        return String.format("Select max(%s) from %s",
-                idField.getName(),
-                objClazz.getSimpleName());
+        if (selectMaxIdStatement == null) {
+            selectMaxIdStatement = String.format("Select max(%s) from %s",
+                    idField.getName(),
+                    objClazz.getSimpleName());
+        }
+        return selectMaxIdStatement;
     }
 
     private long maxId(T objectData) {
@@ -126,16 +150,18 @@ public class JdbcExecutorImpl<T> implements JdbcExecutor<T> {
     }
 
     private String updateStatement(T obj) {
-        var clazz = obj.getClass();
-        String tableName = clazz.getSimpleName();
-        String statement = String.format("update %s set %s where %s = ?", tableName,
-                fields.stream()
-                        .filter( it -> !it.equals(idField))
-                        .map(it -> String.format(" %s = ?", it.getName()))
-                        .collect(Collectors.joining(", ")),
-                idField.getName()
-                );
-        return statement;
+        if (updateStatement == null) {
+            var clazz = obj.getClass();
+            String tableName = clazz.getSimpleName();
+            updateStatement = String.format("update %s set %s where %s = ?", tableName,
+                    fields.stream()
+                            .filter(it -> !it.equals(idField))
+                            .map(it -> String.format(" %s = ?", it.getName()))
+                            .collect(Collectors.joining(", ")),
+                    idField.getName()
+            );
+        }
+        return updateStatement;
     }
 
     @Override
@@ -147,18 +173,18 @@ public class JdbcExecutorImpl<T> implements JdbcExecutor<T> {
         Savepoint savepoint = connection.setSavepoint("UpdateSavepoint");
         try (PreparedStatement preparedStatement
                      = connection.prepareStatement(updateStatement(objectData))) {
-            int rowInd = 1;
+            int parameterIndex = 1;
             for (var field : fields) {
                 if (field.equals(idField)) {
                     continue;
                 }
                 var fieldData = field.get(objectData);
-                preparedStatement.setObject(rowInd, fieldData);
-                rowInd++;
+                preparedStatement.setObject(parameterIndex, fieldData);
+                parameterIndex++;
             }
 
             var idFieldData = idField.get(objectData);
-            preparedStatement.setObject(rowInd, idFieldData);
+            preparedStatement.setObject(parameterIndex, idFieldData);
 
             preparedStatement.execute();
             connection.commit();
@@ -192,65 +218,64 @@ public class JdbcExecutorImpl<T> implements JdbcExecutor<T> {
     }
 
     private String selectStatement(Class<?> clazz) {
-        String statement = String.format("Select %s from %s where %s = ?",
-                fields.stream().map(it -> it.getName()).collect(Collectors.joining(", ")),
-                clazz.getSimpleName(),
-                idField.getName());
-        return statement;
+        if (selectStatement == null) {
+            selectStatement = String.format("Select %s from %s where %s = ?",
+                    fields.stream().map(it -> it.getName()).collect(Collectors.joining(", ")),
+                    clazz.getSimpleName(),
+                    idField.getName());
+        }
+        return selectStatement;
+    }
+
+    private void setPrimitiveValues(Field field, Class<?> fieldType, Object objNew, ResultSet resultSet, int columnInd) {
+        try {
+            if (int.class.isAssignableFrom(fieldType)) {
+                field.setInt(objNew, resultSet.getInt(columnInd));
+            } else if (char.class.isAssignableFrom(fieldType)) {
+                String data = resultSet.getString(columnInd);
+                field.setChar(objNew, data != null ? data.charAt(0) : null);
+            } else if (float.class.isAssignableFrom(fieldType)) {
+                field.setFloat(objNew, resultSet.getFloat(columnInd));
+            } else if (long.class.isAssignableFrom(fieldType)) {
+                field.setLong(objNew, resultSet.getLong(columnInd));
+            } else if (double.class.isAssignableFrom(fieldType)) {
+                field.setDouble(objNew, resultSet.getDouble(columnInd));
+            } else if (short.class.isAssignableFrom(fieldType)) {
+                field.setShort(objNew, resultSet.getShort(columnInd));
+            } else if (byte.class.isAssignableFrom(fieldType)) {
+                field.setByte(objNew, resultSet.getByte(columnInd));
+            } else if (boolean.class.isAssignableFrom(fieldType)) {
+                field.setBoolean(objNew, resultSet.getBoolean(columnInd));
+            } else {
+                throw new RuntimeException("Field type '" + fieldType.getName() + "' is unsupported");
+            }
+        }
+        catch (Exception e) {
+            throw new RuntimeException(String.format("Cannot set data Cannot set data into field '%s' with field type '%s' because of following error: %s",
+                    field.getName(),
+                    fieldType.getName(),
+                    e.getMessage()));
+        }
     }
 
     @Override
     public <T> T load(long id, Class<T> clazz) {
         try (PreparedStatement preparedStatement = connection.prepareStatement(selectStatement(clazz))) {
             preparedStatement.setLong(1, id);
-            int rowInd = 1;
+            int columnInd = 1;
             try (ResultSet resultSet = preparedStatement.executeQuery()) {
                 resultSet.next();
                 final T objNew = clazz.getConstructor().newInstance();
                 for (var field: fields) {
                     var fieldType = field.getType();
 
-                    if (Integer.class.isAssignableFrom(fieldType)
-                            || int.class.isAssignableFrom(fieldType)){
-                        field.setInt(objNew, resultSet.getInt(rowInd));
-                    }
-                    else if (String.class.isAssignableFrom(fieldType)) {
-                        field.set(objNew, resultSet.getString(rowInd));
-                    }
-                    else if (char.class.isAssignableFrom(fieldType)
-                            || Character.class.isAssignableFrom(fieldType)) {
-                        String data = resultSet.getString(rowInd);
-                        field.setChar(objNew, data != null ? data.charAt(0) : null);
-                    }
-                    else if (Float.class.isAssignableFrom(fieldType)
-                            || float.class.isAssignableFrom(fieldType)) {
-                        field.setFloat(objNew, resultSet.getFloat(rowInd));
-                    }
-                    else if (Long.class.isAssignableFrom(fieldType)
-                            || long.class.isAssignableFrom(fieldType)) {
-                        field.setLong(objNew, resultSet.getLong(rowInd));
-                    }
-                    else if (Double.class.isAssignableFrom(fieldType)
-                            || double.class.isAssignableFrom(fieldType)) {
-                        field.setDouble(objNew, resultSet.getDouble(rowInd));
-                    }
-                    else if (Short.class.isAssignableFrom(fieldType)
-                            || short.class.isAssignableFrom(fieldType)) {
-                        field.setShort(objNew, resultSet.getShort(rowInd));
-                    }
-                    else if (Byte.class.isAssignableFrom(fieldType)
-                            || byte.class.isAssignableFrom(fieldType)) {
-                        field.setByte(objNew, resultSet.getByte(rowInd));
-                    }
-                    else if (Boolean.class.isAssignableFrom(fieldType)
-                            || boolean.class.isAssignableFrom(fieldType)) {
-                        field.setBoolean(objNew, resultSet.getBoolean(rowInd));
+                    if (!fieldType.isPrimitive()) {
+                        field.set(objNew, resultSet.getObject(columnInd));
                     }
                     else {
-                        throw new RuntimeException("Cannot set data into field '" + field.getName()
-                                + "' because field type '" + fieldType.getName() +"' is unsupported");
+                        setPrimitiveValues(field, fieldType, objNew, resultSet, columnInd);
                     }
-                    rowInd++;
+                    columnInd++;
                 }
                 return objNew;
             }

@@ -2,11 +2,18 @@
 import model.Account;
 import model.User;
 import orm.JdbcExecutor;
+import orm.TableCreator;
+import orm.impl.H2TableCreatorImpl;
 import orm.impl.JdbcExecutorImpl;
 
 public class Main {
     public static void main(String[] args) {
         try {
+            TableCreator tableCreator = new H2TableCreatorImpl();
+            tableCreator.createUserTableIfNotExist();
+            tableCreator.createAccountTableIfNotExist();
+            tableCreator.closeConnection();
+
             User myUser = new User(2,"Alex", 28);
             JdbcExecutor<User> jdbcExecutorUser = new JdbcExecutorImpl<>();
             jdbcExecutorUser.create(myUser);
