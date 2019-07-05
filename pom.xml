@@ -14,6 +14,9 @@
         <module>hw03-maven</module>
         <module>hw04-bytecode</module>
         <module>hw05-gc</module>
+        <module>hw08-json</module>
+        <module>hw09-orm</module>
+        <module>hw11-soft.cache</module>
     </modules>
 
     <properties>
