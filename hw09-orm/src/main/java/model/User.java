@@ -1,60 +1,53 @@
 package model;
 
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
-import orm.Id;
+import javax.persistence.*;
+import java.util.Set;
+import java.util.stream.Collectors;
 
+
+@NoArgsConstructor
+@Data
+@Entity
+@Table(name = "user")
 public class User {
-    private @Id
-    long id;
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "id", nullable = false)
+    private long id;
+
+    @Column(name = "name")
     private String name;
+
+    @Column(name = "age")
     private int age;
 
-    public User(int id, String name, int age) {
-        this.id = id;
+    @OneToOne(mappedBy = "user", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    private Address address;
+
+    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    private Set<Phone> phoneNumbers;
+
+    public User(String name, int age) {
         this.name = name;
         this.age = age;
     }
-    public User() {
 
-    }
-
-    public int getAge() {
-        return age;
-    }
-
-    public long getId() {
-        return id;
-    }
-
-    public String getName() {
-        return name;
-    }
-
-    public void setAge(int age) {
-        this.age = age;
-    }
-
-    public void setId(long id) {
-        this.id = id;
-    }
-
-    public void setName(String name) {
-        this.name = name;
-    }
 
     @Override
-    public boolean equals(Object obj) {
-        if (this == obj) {
-            return true;
-        }
-        if (!(obj instanceof User)) {
-            return false;
-        }
+    public String toString() {
 
-        User user = (User) obj;
-        return this.name == user.name
-                && this.age == user.age
-                && this.id == user.id;
+        return "User{" +
+                "id=" + id +
+                ", name='" + name + '\'' +
+                ", age='" + age + '\'' +
+                ", address='" + address + '\'' +
+                ", phone= {" +
+                phoneNumbers.stream().map(it -> it.toString()).collect(Collectors.joining(",")) + "}" +
+                '}';
 
     }
 }
