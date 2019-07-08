@@ -6,7 +6,6 @@ public class CacheElement<T> {
     private final long creationTime;
     private long lastAccessTime;
 
-
     public CacheElement(T value) {
         this.value = value;
         this.creationTime = getCurrentTime();
@@ -31,6 +30,10 @@ public class CacheElement<T> {
 
     public long getLastAccessTime() {
         return lastAccessTime;
+    }
+
+    public long usingTime() {
+        return lastAccessTime - creationTime;
     }
 
 }

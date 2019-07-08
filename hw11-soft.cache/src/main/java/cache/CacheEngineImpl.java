@@ -1,10 +1,7 @@
 package cache;
 
 import java.lang.ref.SoftReference;
-import java.util.LinkedHashMap;
-import java.util.Map;
-import java.util.Timer;
-import java.util.TimerTask;
+import java.util.*;
 import java.util.function.Function;
 
 
@@ -40,10 +37,27 @@ public class CacheEngineImpl<K, V> implements CacheEngine<K, V> {
         return oldValue;
     }
 
+    private void removeOldUsedOrFirst() {
+        Optional<Map.Entry<K, SoftReference<CacheElement<V>>>> oldUsedCacheElement = elements.entrySet()
+                .stream()
+                .min((element1, element2) ->
+                        ((Long)element1.getValue().get().usingTime())
+                                .compareTo(element2.getValue().get().usingTime())
+                );
+        if (oldUsedCacheElement.isPresent()) {
+            K key = oldUsedCacheElement.get().getKey();
+            System.out.println("Removed old used element with key " + key);
+            remove(key);
+        } else {
+            K firstKey = elements.keySet().iterator().next();
+            System.out.println("Removed first used element with key " + firstKey);
+            remove(firstKey);
+        }
+    }
+
     public void put(K key, V element) {
         if (elements.size() == maxElements) {
-            K firstKey = elements.keySet().iterator().next();
-            remove(firstKey);
+            removeOldUsedOrFirst();
         }
         CacheElement cacheElement = new CacheElement<>(element);
         elements.put(key, new SoftReference(cacheElement));
@@ -62,22 +76,23 @@ public class CacheEngineImpl<K, V> implements CacheEngine<K, V> {
         }
     }
 
-    public V get(K key) {
+    public Optional<V> get(K key) {
         SoftReference softRef = elements.get(key);
 
         if (softRef == null) {
             miss++;
-            return null;
+            return Optional.ofNullable(null);
         }
         CacheElement<V> element = (CacheElement)softRef.get();
 
         if (element != null) {
             hit++;
             element.setAccessed();
+            System.out.println("Get element from cache " + element.value());
         } else {
             miss++;
         }
-        return element == null ? null : element.value();
+        return Optional.ofNullable(element.value());
     }
 
     public int getHitCount() {

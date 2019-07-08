@@ -101,6 +101,10 @@ public class Main {
                 }
                 user.setPhoneNumbers(phones);
                 hibernateService.create(user);
+                if (i % 2 == 0) {
+                    Thread.sleep(200);
+                    hibernateService.load(i);
+                }
 
             }
             for (int i = 1; i < 20; i++) {

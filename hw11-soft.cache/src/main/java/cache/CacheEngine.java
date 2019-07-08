@@ -1,10 +1,12 @@
 package cache;
 
+import java.util.Optional;
+
 public interface CacheEngine <K, V> {
 
     void put(K key, V element);
 
-    V get(K key);
+    Optional<V> get(K key);
 
     int getHitCount();
 

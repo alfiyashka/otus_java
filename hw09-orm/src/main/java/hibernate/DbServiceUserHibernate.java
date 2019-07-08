@@ -48,14 +48,6 @@ public class DbServiceUserHibernate implements DbServiceUser {
     private SessionFactory sessionFactory;
 
     private User getFromSession(Long id, HibernateTransactionFunction<Long, User> getFunction) {
-        User userFromCache = null;
-        if (isEnableCache()) {
-            userFromCache = cacheEngine.get(id);
-        }
-        if (userFromCache != null) {
-            System.out.println("Get user from cache: " + userFromCache);
-            return userFromCache;
-        }
         try (var session = sessionFactory.openSession()) {
             session.beginTransaction();
             User user = getFunction.apply(session, id);
@@ -128,7 +120,10 @@ public class DbServiceUserHibernate implements DbServiceUser {
     @Override
     public User load(long id) {
         try {
-            return getFromSession(id, (session, id1) -> session.load(User.class, id1));
+            User user = cacheEngine.get(id).orElseGet(
+                    () -> getFromSession(id, (session, id1) -> session.load(User.class, id1))
+            );
+            return user;
         }
         catch (Exception e) {
             throw new RuntimeException(
