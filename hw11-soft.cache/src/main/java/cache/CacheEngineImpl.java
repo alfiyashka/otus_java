@@ -40,10 +40,12 @@ public class CacheEngineImpl<K, V> implements CacheEngine<K, V> {
     private void removeOldUsedOrFirst() {
         Optional<Map.Entry<K, SoftReference<CacheElement<V>>>> oldUsedCacheElement = elements.entrySet()
                 .stream()
-                .min((element1, element2) ->
-                        ((Long)element1.getValue().get().usingTime())
-                                .compareTo(element2.getValue().get().usingTime())
-                );
+                .min((element1, element2) -> {
+                    var cacheElement1 = Optional.ofNullable(element1.getValue().get());
+                    var cacheElement2 = Optional.ofNullable(element2.getValue().get());
+                    return ((Long) (cacheElement1.isPresent() ? cacheElement1.get().usingTime() : 0))
+                            .compareTo((cacheElement2.isPresent() ? cacheElement2.get().usingTime() : 0));
+                });
         if (oldUsedCacheElement.isPresent()) {
             K key = oldUsedCacheElement.get().getKey();
             System.out.println("Removed old used element with key " + key);
@@ -59,8 +61,8 @@ public class CacheEngineImpl<K, V> implements CacheEngine<K, V> {
         if (elements.size() == maxElements) {
             removeOldUsedOrFirst();
         }
-        CacheElement cacheElement = new CacheElement<>(element);
-        elements.put(key, new SoftReference(cacheElement));
+        CacheElement<V> cacheElement = new CacheElement<>(element);
+        elements.put(key, new SoftReference<>(cacheElement));
 
         if (!isEternal) {
             if (lifeTimeMs != 0) {
@@ -77,22 +79,21 @@ public class CacheEngineImpl<K, V> implements CacheEngine<K, V> {
     }
 
     public Optional<V> get(K key) {
-        SoftReference softRef = elements.get(key);
+        Optional<SoftReference<CacheElement<V>>> softRef = Optional.ofNullable(elements.get(key));
 
-        if (softRef == null) {
-            miss++;
-            return Optional.ofNullable(null);
-        }
-        CacheElement<V> element = (CacheElement)softRef.get();
+        Optional<CacheElement<V>> cacheElement = softRef.map(it ->  {
+            var data = Optional.ofNullable(it);
+            return data.isPresent() ? data.get().get() : null;
+        });
+        cacheElement.ifPresentOrElse(
+                (it) -> {
+                    hit++;
+                    it.setAccessed();
+                    System.out.println("Get element from cache " + it.value());
+                },
+                ()-> miss++);
 
-        if (element != null) {
-            hit++;
-            element.setAccessed();
-            System.out.println("Get element from cache " + element.value());
-        } else {
-            miss++;
-        }
-        return Optional.ofNullable(element.value());
+        return Optional.ofNullable(cacheElement.isPresent() ? cacheElement.get().value() : null);
     }
 
     public int getHitCount() {
