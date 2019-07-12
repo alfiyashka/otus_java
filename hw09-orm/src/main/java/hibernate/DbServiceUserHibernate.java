@@ -1,12 +1,9 @@
 package hibernate;
 
+import cache.CacheEngine;
 import dbservice.DbServiceUser;
-import model.Address;
-import model.Phone;
 import model.User;
-import org.hibernate.Session;
 import org.hibernate.SessionFactory;
-import org.hibernate.boot.Metadata;
 import org.hibernate.boot.MetadataSources;
 import org.hibernate.boot.registry.StandardServiceRegistry;
 import org.hibernate.boot.registry.StandardServiceRegistryBuilder;
@@ -16,28 +13,72 @@ import java.sql.SQLException;
 
 public class DbServiceUserHibernate implements DbServiceUser {
 
-    public DbServiceUserHibernate() {
-        Configuration configuration = new Configuration().configure("hibernate.cfg.xml");
+    private CacheEngine<Long, User> cacheEngine;
+
+    public DbServiceUserHibernate(Configuration configuration,
+                                  Class<?>[] annotatedClasses) {
         StandardServiceRegistry registry = new StandardServiceRegistryBuilder()
                 .applySettings(configuration.getProperties()).build();
 
-        Metadata metadata = new MetadataSources(registry)
-                .addAnnotatedClass(User.class)
-                .addAnnotatedClass(Address.class)
-                .addAnnotatedClass(Phone.class)
-                .buildMetadata();
+        MetadataSources metadataSources = new MetadataSources(registry);
+        for (Class<?> clazz: annotatedClasses) {
+            metadataSources.addAnnotatedClass(clazz);
+        }
 
-        sessionFactory = metadata.buildSessionFactory();
+        sessionFactory = metadataSources.buildMetadata().buildSessionFactory();
+    }
+
+    public DbServiceUserHibernate setCacheEngine(CacheEngine<Long, User> cacheEngine) {
+        this.cacheEngine = cacheEngine;
+        return this;
+    }
+
+    private boolean isEnableCache() {
+        return cacheEngine != null;
+    }
+
+    public int getCacheMissCount() {
+        return (isEnableCache()) ? cacheEngine.getMissCount() : -1;
+    }
+
+    public int getCacheHitCount() {
+        return (isEnableCache()) ? cacheEngine.getHitCount() : -1;
     }
 
     private SessionFactory sessionFactory;
 
+    private User getFromSession(Long id, HibernateTransactionFunction<Long, User> getFunction) {
+        try (var session = sessionFactory.openSession()) {
+            session.beginTransaction();
+            User user = getFunction.apply(session, id);
+            session.getTransaction().commit();
+            return user;
+        }
+        catch (Exception e) {
+            sessionFactory.getCurrentSession().getTransaction().rollback();
+            throw e;
+        }
+    }
+
+    private void performInSession(User user, HibernateTransactionConsumer<User> hibernateFunction) {
+        try (var session = sessionFactory.openSession()) {
+            session.beginTransaction();
+            hibernateFunction.perform(session, user);
+            session.getTransaction().commit();
+            if (isEnableCache()) {
+                cacheEngine.put(user.getId(), user);
+            }
+        }
+        catch (Exception e) {
+            sessionFactory.getCurrentSession().getTransaction().rollback();
+            throw e;
+        }
+    }
+
     @Override
     public void create(User user) {
-        try (var session = sessionFactory.openSession()){
-            session.beginTransaction();
-            session.save(user);
-            session.getTransaction().commit();
+        try {
+            performInSession(user, (session, user1) -> session.save(user1));
             System.out.println("-->Created user: " + user);
         }
         catch (Exception e) {
@@ -50,10 +91,8 @@ public class DbServiceUserHibernate implements DbServiceUser {
 
     @Override
     public void update(User user)  {
-        try (var session = sessionFactory.openSession()){
-            session.beginTransaction();
-            session.update(user);
-            session.getTransaction().commit();
+        try {
+            performInSession(user, (session, user1) -> session.update(user1));
             System.out.println("-->Updated user: " + user);
         }
         catch (Exception e) {
@@ -66,10 +105,8 @@ public class DbServiceUserHibernate implements DbServiceUser {
 
     @Override
     public void createOrUpdate(User user) {
-        try (Session session = sessionFactory.openSession()) {
-            session.beginTransaction();
-            session.saveOrUpdate(user);
-            session.getTransaction().commit();
+        try {
+            performInSession(user, (session, user1) -> session.saveOrUpdate(user1));
             System.out.println("-->Create or updated user: " + user);
         }
         catch (Exception e) {
@@ -82,9 +119,10 @@ public class DbServiceUserHibernate implements DbServiceUser {
 
     @Override
     public User load(long id) {
-        try (Session session = sessionFactory.openSession()) {
-            User user = session.get(User.class, id);
-            System.out.println("-->Loaded user: " + user);
+        try {
+            User user = cacheEngine.get(id).orElseGet(
+                    () -> getFromSession(id, (session, id1) -> session.load(User.class, id1))
+            );
             return user;
         }
         catch (Exception e) {
