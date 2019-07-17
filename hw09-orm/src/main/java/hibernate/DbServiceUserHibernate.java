@@ -8,8 +8,10 @@ import org.hibernate.boot.MetadataSources;
 import org.hibernate.boot.registry.StandardServiceRegistry;
 import org.hibernate.boot.registry.StandardServiceRegistryBuilder;
 import org.hibernate.cfg.Configuration;
+import org.hibernate.query.Query;
 
 import java.sql.SQLException;
+import java.util.List;
 
 public class DbServiceUserHibernate implements DbServiceUser {
 
@@ -120,10 +122,9 @@ public class DbServiceUserHibernate implements DbServiceUser {
     @Override
     public User load(long id) {
         try {
-            User user = cacheEngine.get(id).orElseGet(
+            return cacheEngine.get(id).orElseGet(
                     () -> getFromSession(id, (session, id1) -> session.load(User.class, id1))
             );
-            return user;
         }
         catch (Exception e) {
             throw new RuntimeException(
@@ -133,7 +134,24 @@ public class DbServiceUserHibernate implements DbServiceUser {
     }
 
     @Override
-    public void close() throws SQLException {
+    public void close() {
         sessionFactory.close();
+    }
+
+    @Override
+    public List<User> getAll() {
+        try (var session = sessionFactory.openSession()) {
+            session.beginTransaction();
+            Query query = session.createQuery("from User");
+            List<User> list = query.list();
+            session.getTransaction().commit();
+            return list;
+        }
+        catch (Exception e) {
+            sessionFactory.getCurrentSession().getTransaction().rollback();
+            throw new RuntimeException(
+                    String.format("Cannot load data from table 'user' because of error: %s", e.getMessage()),
+                    e);
+        }
     }
 }

@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Create user</title>
+</head>
+<body>
+<form id="myForm">
+    <fieldset>
+        <legend>Create User:</legend>
+        Name: <input type="text" id="name"><br>
+        Age: <input type="text" id="age"><br>
+        Address: <input type="text" id="address"><br>
+        Phone: <input type="text" id="phone">
+    </fieldset>
+
+    <div class="row">
+        <button type="button" onclick="data()">Save</button>
+    </div>
+    <script type="text/javascript">
+          function data() {
+          var userName = document.forms["myForm"]["name"].value;
+          var userAge = document.forms["myForm"]["age"].value;
+          var userAddress = document.forms["myForm"]["address"].value;
+          var userPhone = document.forms["myForm"]["phone"].value;
+          var payload = { name: userName, age: userAge, address: userAddress, phone: userPhone };
+          var data =JSON.stringify(payload)
+          fetch('http://localhost:8080/userCreate',
+             {
+                  method: 'post',
+                  headers: {
+                        'Accept': 'application/json, text/plain, */*',
+                        'Content-Type': 'application/json'},
+                  body: data
+             })
+                .then(function (response) {
+                    if (response.status == 201) {
+                        alert("User created");
+                    }
+                    else {
+                        alert("Cannot create user");
+                    }
+                    console.log(response)
+                    return response.json();
+                });
+          }
+          </script>
+</form>
+</body>
+</html>
