@@ -15,6 +15,7 @@
         <jetty.version>9.4.19.v20190610</jetty.version>
     </properties>
 
+
     <dependencies>
         <dependency>
             <groupId>com.h2database</groupId>
