@@ -1,22 +1,20 @@
 package webserver.servlets;
 
+import com.google.gson.Gson;
 import dbservice.DbServiceUser;
-import model.Address;
-import model.Phone;
 import model.User;
-import webserver.models.UserJson;
+import webserver.dto.UserDto;
+import webserver.dto.UserDtoConvertor;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
-import java.util.HashSet;
-import java.util.Set;
 import java.util.stream.Collectors;
 
-public class CreateUser extends UserServlet {
+public class CreateUserServlet extends UserServlet {
 
-    public CreateUser(DbServiceUser hibernateService) {
-        super(hibernateService);
+    public CreateUserServlet(DbServiceUser hibernateService, Gson gson) {
+        super(hibernateService, gson);
     }
 
     @Override
@@ -31,13 +29,8 @@ public class CreateUser extends UserServlet {
         try {
             if (!requestBody.isEmpty()) {
                 System.out.println("Tried to create user: " + requestBody);
-                UserJson userJson = getGson().fromJson(requestBody, UserJson.class);
-                User user = new User(userJson.getName(), userJson.getAge());
-                Address address = new Address(userJson.getAddress(), user);
-                user.setAddress(address);
-                Set<Phone> phones = new HashSet<>();
-                phones.add(new Phone(userJson.getPhone(), user));
-                user.setPhoneNumbers(phones);
+                UserDto userDto = getGson().fromJson(requestBody, UserDto.class);
+                User user = UserDtoConvertor.convertToUser(userDto);
                 getHibernateService().createOrUpdate(user);
                 setResponseData(response,
                         HttpServletResponse.SC_CREATED,

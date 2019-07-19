@@ -8,12 +8,13 @@ import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.io.PrintWriter;
 
-abstract class UserServlet extends HttpServlet {
-    private static final Gson gson = new Gson();
+public class UserServlet  extends HttpServlet {
+    private final Gson gson;
     private final DbServiceUser hibernateService;
 
-    public UserServlet(DbServiceUser hibernateService) {
-       this.hibernateService = hibernateService;
+    public UserServlet(DbServiceUser hibernateService, Gson gson) {
+        this.hibernateService = hibernateService;
+        this.gson = gson;
     }
 
     protected DbServiceUser getHibernateService() {
@@ -25,8 +26,8 @@ abstract class UserServlet extends HttpServlet {
     }
 
     protected void setResponseData(HttpServletResponse response,
-                                 int responseCode,
-                                 String data) throws IOException{
+                                   int responseCode,
+                                   String data) throws IOException {
         response.setContentType("application/json");
         response.setStatus(responseCode);
         PrintWriter printWriter = response.getWriter();
@@ -34,3 +35,4 @@ abstract class UserServlet extends HttpServlet {
         printWriter.flush();
     }
 }
+

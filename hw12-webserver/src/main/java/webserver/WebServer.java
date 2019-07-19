@@ -1,5 +1,6 @@
 package webserver;
 
+import com.google.gson.Gson;
 import dbservice.DbServiceUser;
 import hibernate.DbServiceUserHibernate;
 import model.Address;
@@ -16,8 +17,9 @@ import org.eclipse.jetty.servlet.ServletHolder;
 import org.eclipse.jetty.util.security.Constraint;
 import org.eclipse.jetty.util.security.Password;
 import org.hibernate.cfg.Configuration;
-import webserver.servlets.CreateUser;
-import webserver.servlets.UserInfo;
+import webserver.servlets.CreateUserServlet;
+import webserver.servlets.UserInfoServlet;
+
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.Collections;
@@ -44,9 +46,10 @@ public class WebServer {
     private Server createServer(int port) throws MalformedURLException {
 
         DbServiceUser hibernateService = createHibernateService();
+        Gson gson = new Gson();
         ServletContextHandler context = new ServletContextHandler(ServletContextHandler.SESSIONS);
-        context.addServlet(new ServletHolder(new UserInfo(hibernateService)), "/users");
-        context.addServlet(new ServletHolder(new CreateUser(hibernateService)), "/userCreate");
+        context.addServlet(new ServletHolder(new UserInfoServlet(hibernateService, gson)), "/users");
+        context.addServlet(new ServletHolder(new CreateUserServlet(hibernateService, gson)), "/userCreate");
 
         Server server = new Server(port);
         server.setHandler(new HandlerList(context));

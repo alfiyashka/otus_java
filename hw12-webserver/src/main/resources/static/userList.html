@@ -6,30 +6,31 @@
     </script>
 </head>
 <body>
+<p><a href="index.html">Back to main page</a> </p>
 <button id="lab" onclick="updateUsers()" value="updateTable">Get Users</button>
 <table class="users" border="1">
-     <thead>
-          <tr>
-              <th>Name</th>
-              <th>Age</th>
-              <th>Address</th>
-              <th>Phone</th>
-          </tr>
-     </thead>
-     <tbody id="tableRow">
-          <script type="text/JavaScript">
+    <thead>
+    <tr>
+        <th>Name</th>
+        <th>Age</th>
+        <th>Address</th>
+        <th>Phone</th>
+    </tr>
+    </thead>
+    <tbody id="tableBody">
+    <script type="text/JavaScript">
                function updateUsers() {
                 fetch('http://localhost:8080/users')
                             .then(function (response) {
                     return response.json();
                 })
                 .then(function (users) {
-                    tableRow.innerHTML = "";
+                    tableBody.innerHTML = "";
                     if (users.length == 0) {
                         alert("There are not any users. Please, create one if needed");
                     }
                     users.forEach(function(element) {
-                        tableRow.innerHTML += "<tr><td>" + element.name
+                        tableBody.innerHTML += "<tr><td>" + element.name
                                 + "</td><td>" + element.age
                                 + "</td><td>" + element.address
                                 + "</td><td>" + element.phone
@@ -39,7 +40,8 @@
                 })
                }
            </script>
-     </tbody>
-  </table>
+    </tbody>
+</table>
 
 </body>
+</html>

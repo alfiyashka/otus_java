@@ -1,8 +1,10 @@
 package webserver.servlets;
 
+import com.google.gson.Gson;
 import dbservice.DbServiceUser;
 import model.User;
-import webserver.models.UserJson;
+import webserver.dto.UserDto;
+import webserver.dto.UserDtoConvertor;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -11,10 +13,10 @@ import java.io.PrintWriter;
 import java.util.List;
 import java.util.stream.Collectors;
 
-public class UserInfo extends UserServlet {
+public class UserInfoServlet extends UserServlet {
 
-    public UserInfo(DbServiceUser hibernateService) {
-        super (hibernateService);
+    public UserInfoServlet(DbServiceUser hibernateService, Gson gson) {
+        super (hibernateService, gson);
     }
 
     @Override
@@ -22,13 +24,10 @@ public class UserInfo extends UserServlet {
         try {
             System.out.println("Enter doGET");
             List<User> users = getHibernateService().getAll();
-            List<UserJson> userJsons = users.stream().map(it ->
-                new UserJson(it.getName(),
-                        it.getAge(),
-                        it.getAddress().getStreet(),
-                        it.getPhoneNumbers().iterator().next().getNumber()))
+            List<UserDto> userDtos = users.stream().map(
+                    UserDtoConvertor::convertToUserDto)
                     .collect(Collectors.toList());
-            String resultAsString = getGson().toJson(userJsons);
+            String resultAsString = getGson().toJson(userDtos);
 
             response.setContentType("application/json");
             response.setStatus(HttpServletResponse.SC_OK);
@@ -43,3 +42,4 @@ public class UserInfo extends UserServlet {
         }
     }
 }
+
