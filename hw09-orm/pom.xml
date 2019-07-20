@@ -11,6 +11,11 @@
 
     <artifactId>hw09-orm</artifactId>
 
+    <properties>
+        <jetty.version>9.4.19.v20190610</jetty.version>
+    </properties>
+
+
     <dependencies>
         <dependency>
             <groupId>com.h2database</groupId>
@@ -33,5 +38,6 @@
             <artifactId>hw11-soft.cache</artifactId>
             <version>1.0-SNAPSHOT</version>
         </dependency>
+
     </dependencies>
 </project>
