@@ -10,15 +10,14 @@ import org.hibernate.boot.registry.StandardServiceRegistryBuilder;
 import org.hibernate.cfg.Configuration;
 import org.hibernate.query.Query;
 
-import java.sql.SQLException;
 import java.util.List;
 
 public class DbServiceUserHibernate implements DbServiceUser {
 
     private CacheEngine<Long, User> cacheEngine;
 
-    public DbServiceUserHibernate(Configuration configuration,
-                                  Class<?>[] annotatedClasses) {
+    private void init(Configuration configuration,
+                      Class<?>[] annotatedClasses) {
         StandardServiceRegistry registry = new StandardServiceRegistryBuilder()
                 .applySettings(configuration.getProperties()).build();
 
@@ -30,7 +29,19 @@ public class DbServiceUserHibernate implements DbServiceUser {
         sessionFactory = metadataSources.buildMetadata().buildSessionFactory();
     }
 
-    public DbServiceUserHibernate setCacheEngine(CacheEngine<Long, User> cacheEngine) {
+    public DbServiceUserHibernate(Configuration configuration,
+                                  Class<?>[] annotatedClasses) {
+        init(configuration, annotatedClasses);
+
+    }
+    public DbServiceUserHibernate(Configuration configuration,
+                                  Class<?>[] annotatedClasses,
+                                  CacheEngine<Long, User> cacheEngine){
+        init(configuration, annotatedClasses);
+        setCacheEngine(cacheEngine);
+    }
+
+    public DbServiceUser setCacheEngine(CacheEngine<Long, User> cacheEngine) {
         this.cacheEngine = cacheEngine;
         return this;
     }
