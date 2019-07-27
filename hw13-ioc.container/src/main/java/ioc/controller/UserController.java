@@ -1,8 +1,8 @@
 package ioc.controller;
 
+import dbservice.DbServiceUser;
 import ioc.dto.UserDto;
 import ioc.dto.UserDtoConvertor;
-import ioc.repository.UserRepository;
 import model.User;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -19,14 +19,14 @@ import java.util.stream.Collectors;
 @Controller
 public class UserController
 {
-    private final UserRepository repository;
-    public UserController(UserRepository repository) {
-        this.repository = repository;
+    private final DbServiceUser dbServiceUser;
+    public UserController(DbServiceUser dbServiceUser) {
+        this.dbServiceUser = dbServiceUser;
     }
 
     @GetMapping({"/", "/user/list"})
     public String userList(Model model) throws SQLException {
-        List<User> users = repository.getAll();
+        List<User> users = dbServiceUser.getAll();
         List<UserDto> dtoUsers =
                 users != null
                         ? users
@@ -47,7 +47,7 @@ public class UserController
     @PostMapping("/user/save")
     public RedirectView userSave(@ModelAttribute UserDto userDto) throws SQLException {
         User user = UserDtoConvertor.convertToUser(userDto);
-        repository.create(user);
+        dbServiceUser.create(user);
         return new RedirectView("/user/list", true);
     }
 }
