@@ -2,15 +2,10 @@ package jmm;
 
 public class Printer {
     private long id;
-
-    public synchronized void print(long counter) {
-        boolean printedThreadNames = false;
+    private boolean printedThreadNames = false;
+    public synchronized void print(long counter) throws InterruptedException {
         while (id == Thread.currentThread().getId()) {
-            try {
-                wait();
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-            }
+            wait();
             if (!printedThreadNames) {
                 printedThreadNames = true;
             }
