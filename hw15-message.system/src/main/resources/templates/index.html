@@ -1,0 +1,89 @@
+<!DOCTYPE HTML>
+<html ng-app="UserWsApp" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Otus HW 15</title>
+    <!--Import Google Icon Font-->
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <!--Import materialize.css-->
+    <link type="text/css" rel="stylesheet" th:href="@{css/materialize.min.css}" media="screen,projection"/>
+    <!--Let browser know website is optimized for mobile-->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <script src="/webjars/jquery/jquery.min.js"></script>
+    <script src="/webjars/sockjs-client/sockjs.min.js"></script>
+    <script src="/webjars/stomp-websocket/stomp.min.js"></script>
+    <script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/angularjs/1.6.5/angular.min.js"></script>
+    <head>
+<body>
+<div ng-controller="WsCtrl as main">
+    <div class="nav-wrapper">
+        <label for="connect">WebSocket connection:</label>
+        <button id="connect" class="btn btn-default" onclick="WsCtrl.connectWs()" type="submit">Connect</button>
+        <button id="disconnect" class="btn btn-default" onclick="WsCtrl.disconnectWs()" type="submit" disabled="disabled">Disconnect</button>
+    </div>
+    <div class="nav-content">
+        <button data-target="modal1"
+                class="btn-floating modal-trigger btn-large halfway-fab waves-effect waves-light teal left disabled manipulate">
+            <i class="material-icons left">add</i>
+        </button>
+    </div>
+    <div id="container" class="container">
+        <div id="modal1" class="modal">
+            <div class="modal-content">
+                <form ng-submit="main.submitUser()" enctype="multipart/form-data">
+                    <span class="card-title">Input user data</span>
+                    <div class="card">
+                        <div class="card-content">
+                            <table border="0">
+                                <tr>
+                                    <td>Name</td>
+                                    <td><input type="text" ng-model="userForm.name"/></td>
+                                </tr>
+                                <tr>
+                                    <td>Age</td>
+                                    <td><input type="text" ng-model="userForm.age"/></td>
+                                </tr>
+                                <tr>
+                                    <td>Address</td>
+                                    <td><input type="text" ng-model="userForm.address"/></td>
+                                </tr>
+                                <tr>
+                                    <td>Phone</td>
+                                    <td><input type="text" ng-model="userForm.phone"/></td>
+                                </tr>
+                                <tr>
+                                    <td colspan="2">
+                                        <button class="btn waves-effect waves-light modal-close" type="submit"
+                                                name="action">Send
+                                            <i class="material-icons right">send</i>
+                                        </button>
+                                    </td>
+                                </tr>
+                            </table>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+        <br/>
+        <table border="1">
+            <tr>
+                <th>Name</th>
+                <th>Age</th>
+                <th>Address</th>
+                <th>Phone</th>
+            </tr>
+            <!-- $scope.users -->
+            <tr ng-repeat="user in main.users">
+                <td> {{ user.name }}</td>
+                <td> {{ user.age }}</td>
+                <td> {{ user.address }}</td>
+                <td> {{ user.phone }}</td>
+            </tr>
+        </table>
+    </div>
+</div>
+<!--JavaScript at end of body for optimized loading-->
+<script type="text/javascript" th:src="@{scripts/lib/materialize.min.js}"></script>
+<script th:src="@{scripts/ws_controller.js}"></script>
+</body>
+</html>
