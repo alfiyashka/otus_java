@@ -44,6 +44,13 @@ public final class MessageSystem {
                     logger.log(Level.INFO, "Thread interrupted. Finishing: " + name);
                     return;
                 }
+                catch (Exception e) {
+                    logger.log(Level.WARNING,
+                            String.format("Thread aborted %s. Occurred following exception: %s",
+                                    name, e.getMessage()));
+                    e.printStackTrace();
+                    return;
+                }
             }
         });
         thread.setName(name);

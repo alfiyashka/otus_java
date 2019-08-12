@@ -8,11 +8,11 @@ import org.springframework.stereotype.Service;
 public class MessageSystemContext {
     private final MessageSystem messageSystem;
 
-    private Address frontAddress = new Address("Frontend");
-    private Address dbAddress = new Address("DB");
+    MessageContextAddress address;
 
-    public MessageSystemContext(MessageSystem messageSystem) {
+    public MessageSystemContext(MessageSystem messageSystem, MessageContextAddress address) {
         this.messageSystem = messageSystem;
+        this.address = address;
     }
 
     public MessageSystem getMessageSystem() {
@@ -20,19 +20,11 @@ public class MessageSystemContext {
     }
 
     public Address getFrontAddress() {
-        return frontAddress;
-    }
-
-    public void setFrontAddress(Address frontAddress) {
-        this.frontAddress = frontAddress;
+        return address.getFrontAddress();
     }
 
     public Address getDbAddress() {
-        return dbAddress;
-    }
-
-    public void setDbAddress(Address dbAddress) {
-        this.dbAddress = dbAddress;
+        return address.getFrontAddress();
     }
 }
 

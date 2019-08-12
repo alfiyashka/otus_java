@@ -2,14 +2,17 @@ package message.system;
 
 import dbservice.DbServiceUser;
 import hibernate.DbServiceUserHibernate;
+import message.system.context.MessageContextAddress;
 import model.Address;
 import model.Phone;
 import model.User;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 
 @SpringBootApplication
+@EnableConfigurationProperties(MessageContextAddress.class)
 public class Main {
 
     @Bean

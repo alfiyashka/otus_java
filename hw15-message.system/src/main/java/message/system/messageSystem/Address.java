@@ -1,5 +1,6 @@
 package message.system.messageSystem;
 
+import java.util.Objects;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public final class Address {
@@ -21,7 +22,7 @@ public final class Address {
 
         Address address = (Address) o;
 
-        return id != null ? id.equals(address.id) : address.id == null;
+        return Objects.equals(id, address.id);
     }
 
     @Override
