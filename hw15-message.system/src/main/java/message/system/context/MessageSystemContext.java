@@ -24,7 +24,7 @@ public class MessageSystemContext {
     }
 
     public Address getDbAddress() {
-        return address.getFrontAddress();
+        return address.getDbAddress();
     }
 }
 

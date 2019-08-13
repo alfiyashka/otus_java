@@ -46,10 +46,9 @@ public final class MessageSystem {
                 }
                 catch (Exception e) {
                     logger.log(Level.WARNING,
-                            String.format("Thread aborted %s. Occurred following exception: %s",
+                            String.format("Thread %s. Occurred following exception: %s",
                                     name, e.getMessage()));
                     e.printStackTrace();
-                    return;
                 }
             }
         });
