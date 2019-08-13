@@ -1,0 +1,13 @@
+server:
+  port: 8080
+
+
+spring:
+  datasource:
+    url: jdbc:h2:mem:testDB;DB_CLOSE_DELAY=-1
+    data-username: sa
+    driver-class-name: org.h2.Driver
+
+message-address:
+  frontAddress: Frontend
+  dbAddress: DB
