@@ -12,7 +12,7 @@
     <artifactId>hw12-webserver</artifactId>
 
     <properties>
-        <jetty.version>9.4.19.v20190610</jetty.version>
+        <jetty.version>10.0.10</jetty.version>
     </properties>
 
     <dependencies>
